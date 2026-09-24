@@ -23,16 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    "django-insecure-3)z4g)m7hu!dwdbcuqrx6_iwc*05#%zbb9@^motd&_"
-    "f6%mi4p@"
-)
-
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-me")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        "DJANGO_ALLOWED_HOSTS",
+        "localhost,127.0.0.1",
+    ).split(",")
+    if host.strip()
+]
 
 # Application definition
 
@@ -84,14 +86,13 @@ WSGI_APPLICATION = "project.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "news_db",
-        "USER": "root",
+        "NAME": os.getenv("DB_NAME", "news_db"),
+        "USER": os.getenv("DB_USER", "root"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": "localhost",
-        "PORT": "3306",
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "3306"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
