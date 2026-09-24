@@ -1,9 +1,17 @@
+"""
+Models for the news application.
+
+This module defines the database models used to represent users,
+publishers, articles, and newsletters, including role-based access
+and subscription relationships.
+"""
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
 class Publisher(models.Model):
-    """Represents a news publisher."""
+    """Represent a news publisher and its associated members."""
 
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
@@ -14,13 +22,16 @@ class Publisher(models.Model):
     )
 
     def __str__(self):
+        """Return the publisher's name as its string representation."""
         return self.name
 
 
 class User(AbstractUser):
-    """Custom user model with role-based access and subscriptions."""
+    """Represent a custom user with roles and subscription relationships."""
 
     class Role(models.TextChoices):
+        """Define the available roles that a user can have."""
+
         READER = "READER", "Reader"
         EDITOR = "EDITOR", "Editor"
         JOURNALIST = "JOURNALIST", "Journalist"
@@ -45,29 +56,30 @@ class User(AbstractUser):
     )
 
 
-def save(self, *args, **kwargs):
-    """Keep role-specific subscription fields consistent."""
+    def save(self, *args, **kwargs):
+        """Keep role-specific subscription fields consistent."""
 
-    super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
-    if self.role == self.Role.JOURNALIST:
-        self.subscribed_publishers.clear()
-        self.subscribed_journalists.clear()
+        if self.role == self.Role.JOURNALIST:
+            self.subscribed_publishers.clear()
+            self.subscribed_journalists.clear()
 
-    elif self.role == self.Role.READER:
-        # Reader subscriptions are valid for readers.
-        pass
+        elif self.role == self.Role.READER:
+            # Reader subscriptions are valid for readers.
+            pass
 
-    elif self.role == self.Role.EDITOR:
-        self.subscribed_publishers.clear()
-        self.subscribed_journalists.clear()
+        elif self.role == self.Role.EDITOR:
+            self.subscribed_publishers.clear()
+            self.subscribed_journalists.clear()
 
     def __str__(self):
+        """Return the user's username as its string representation."""
         return self.username
 
 
 class Article(models.Model):
-    """Represents an article written by a journalist or publisher member."""
+    """Represent a news article written by an authorised user."""
 
     title = models.CharField(max_length=255)
     content = models.TextField()
@@ -87,6 +99,11 @@ class Article(models.Model):
     )
 
     def clean(self):
+        """Validate that the article's author is permitted to write it.
+
+    Independent articles must be written by journalists, while
+    publisher articles may be written by journalists or editors.
+        """
         from django.core.exceptions import ValidationError
 
         if self.publisher is None and self.author.role != User.Role.JOURNALIST:
@@ -104,11 +121,12 @@ class Article(models.Model):
             )
 
     def __str__(self):
+        """Return the article title as its string representation."""
         return self.title
 
 
 class Newsletter(models.Model):
-    """A curated collection of articles."""
+    """Represent a curated collection of news articles."""
 
     title = models.CharField(max_length=255)
     description = models.TextField()
@@ -125,4 +143,5 @@ class Newsletter(models.Model):
     )
 
     def __str__(self):
+        """Return the newsletter title as its string representation."""
         return self.title

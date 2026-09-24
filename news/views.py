@@ -1,3 +1,11 @@
+"""
+Views for the news article review and approval workflow.
+
+This module provides views for editors to review articles, approve
+articles, notify subscribers by email, and send approved article
+data to the application's API endpoint.
+"""
+
 import requests
 from django.conf import settings
 from django.contrib import messages
@@ -9,9 +17,21 @@ from django.views.decorators.http import require_POST
 from .models import Article, User
 
 
+def home(request):
+    """
+    Display the landing page for the news application.
+    """
+    return render(request, "news/home.html")
+
+
 @login_required
 def article_review(request):
-    """Display articles awaiting editor approval."""
+    """
+    Display articles that are waiting for editor approval.
+
+    Only authenticated users with the Editor role can access the
+    article review page.
+    """
 
     if request.user.role != User.Role.EDITOR:
         return render(
@@ -37,7 +57,12 @@ def article_review(request):
 @login_required
 @require_POST
 def approve_article(request, article_id):
-    """Approve an article and notify subscribers."""
+    """
+    Approve an article and notify its subscribers.
+
+    The approved article is saved, subscribers are notified by email,
+    and the approved article data is sent to the application's API.
+    """
 
     if request.user.role != User.Role.EDITOR:
         return render(
