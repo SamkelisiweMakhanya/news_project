@@ -1,3 +1,10 @@
+"""
+Serializers for the news application's API.
+
+This module defines serializers for users, publishers, articles, and
+newsletters. The serializers control how model data is converted
+to and from JSON for API requests and responses.
+"""
 
 from typing import ClassVar
 
@@ -7,7 +14,11 @@ from .models import Article, Newsletter, Publisher, User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Serialize user information for API responses."""
+
     class Meta:
+        """Configure the fields included in the user serializer."""
+
         model = User
         fields: ClassVar[list[str]] = [
             "id",
@@ -18,7 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class PublisherSerializer(serializers.ModelSerializer):
+    """Serialize publisher information for API requests and responses."""
+
     class Meta:
+        """Configure the fields included in the publisher serializer."""
+
         model = Publisher
         fields: ClassVar[list[str]] = [
             "id",
@@ -29,6 +44,8 @@ class PublisherSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
+    """Serialize article information and validate article creation."""
+
     author = UserSerializer(read_only=True)
     publisher = serializers.PrimaryKeyRelatedField(
         queryset=Publisher.objects.all(),
@@ -37,6 +54,8 @@ class ArticleSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
+        """Configure the fields and read-only fields for articles."""
+
         model = Article
         fields: ClassVar[list[str]] = [
             "id",
@@ -53,8 +72,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        """Validate the article's journalist/publisher relationship."""
-
+        """Validate the author's role and publisher relationship."""
         request = self.context.get("request")
         author = request.user if request else None
         publisher = attrs.get("publisher")
@@ -64,10 +82,7 @@ class ArticleSerializer(serializers.ModelSerializer):
                 "An authenticated author is required."
             )
 
-        if author.role not in (
-            User.Role.JOURNALIST,
-            User.Role.EDITOR,
-        ):
+        if author.role not in (User.Role.JOURNALIST, User.Role.EDITOR):
             raise serializers.ValidationError(
                 "Only journalists and editors can create articles."
             )
@@ -81,9 +96,13 @@ class ArticleSerializer(serializers.ModelSerializer):
 
 
 class NewsletterSerializer(serializers.ModelSerializer):
+    """Serialize newsletter information for API requests and responses."""
+
     author = UserSerializer(read_only=True)
 
     class Meta:
+        """Configure the fields and read-only fields for newsletters."""
+
         model = Newsletter
         fields: ClassVar[list[str]] = [
             "id",
@@ -99,6 +118,8 @@ class NewsletterSerializer(serializers.ModelSerializer):
 
 
 class ApprovedArticleSerializer(serializers.ModelSerializer):
+    """Serialize articles received through the approval workflow."""
+
     author = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
     )
@@ -109,6 +130,8 @@ class ApprovedArticleSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
+        """Configure the fields and read-only fields for approved articles."""
+
         model = Article
         fields: ClassVar[list[str]] = [
             "id",

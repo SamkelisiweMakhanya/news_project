@@ -1,3 +1,11 @@
+"""
+Test suite for the news application's API and authentication features.
+
+This module contains automated tests for article and newsletter APIs,
+role-based permissions, publisher subscriptions, article approval,
+email notifications, API logging, user groups, and token authentication.
+"""
+
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -14,6 +22,7 @@ class ArticleAPITests(APITestCase):
     """Test article API authentication, roles, and subscriptions."""
 
     def setUp(self):
+        """Create users, publishers, and articles required by the tests."""
         self.reader = User.objects.create_user(
             username="reader1",
             password="ReaderPass123!",
@@ -70,12 +79,14 @@ class ArticleAPITests(APITestCase):
         )
 
     def authenticate(self, user):
+        """Authenticate the test client using a DRF token for the user."""
         token, _ = Token.objects.get_or_create(user=user)
         self.client.credentials(
             HTTP_AUTHORIZATION=f"Token {token.key}"
         )
 
     def test_unauthenticated_article_list_is_rejected(self):
+        """Verify unauthenticated users cannot access the article API."""
         url = reverse("article-list-create")
 
         response = self.client.get(url)
@@ -83,6 +94,7 @@ class ArticleAPITests(APITestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_reader_can_retrieve_approved_articles(self):
+        """Verify readers can retrieve approved articles."""
         self.authenticate(self.reader)
 
         url = reverse("article-list-create")
@@ -107,6 +119,7 @@ class ArticleAPITests(APITestCase):
         )
 
     def test_reader_can_only_retrieve_subscribed_articles(self):
+        """Verify readers only receive articles from subscribed publishers."""
         self.authenticate(self.reader)
 
         url = reverse("subscribed-articles")
@@ -136,6 +149,7 @@ class ArticleAPITests(APITestCase):
         )
 
     def test_reader_cannot_create_article(self):
+        """Verify readers are not permitted to create articles."""
         self.authenticate(self.reader)
 
         url = reverse("article-list-create")
@@ -152,6 +166,7 @@ class ArticleAPITests(APITestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_journalist_can_create_article(self):
+        """Verify journalists can create new articles."""
         self.authenticate(self.journalist)
 
         url = reverse("article-list-create")
@@ -172,6 +187,7 @@ class ArticleAPITests(APITestCase):
         )
 
     def test_journalist_can_update_article(self):
+        """Verify journalists can update an existing article."""
         self.authenticate(self.journalist)
 
         url = reverse(
@@ -195,6 +211,7 @@ class ArticleAPITests(APITestCase):
         )
 
     def test_editor_can_delete_article(self):
+        """Verify editors can delete an existing article."""
         self.authenticate(self.editor)
 
         url = reverse(
@@ -216,6 +233,7 @@ class NewsletterAPITests(APITestCase):
     """Test newsletter permissions and API behavior."""
 
     def setUp(self):
+        """Create users, an article, and a newsletter for testing."""
         self.reader = User.objects.create_user(
             username="newsletter_reader",
             password="ReaderPass123!",
@@ -250,12 +268,14 @@ class NewsletterAPITests(APITestCase):
         self.newsletter.articles.add(self.article)
 
     def authenticate(self, user):
+        """Authenticate the test client using a DRF token for the user."""
         token, _ = Token.objects.get_or_create(user=user)
         self.client.credentials(
             HTTP_AUTHORIZATION=f"Token {token.key}"
         )
 
     def test_reader_can_view_newsletters(self):
+        """Verify readers can view available newsletters."""
         self.authenticate(self.reader)
 
         response = self.client.get(
@@ -270,6 +290,7 @@ class NewsletterAPITests(APITestCase):
         )
 
     def test_reader_cannot_create_newsletter(self):
+        """Verify readers cannot create newsletters."""
         self.authenticate(self.reader)
 
         response = self.client.post(
@@ -285,6 +306,7 @@ class NewsletterAPITests(APITestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_journalist_can_create_newsletter(self):
+        """Verify journalists can create newsletters."""
         self.authenticate(self.journalist)
 
         response = self.client.post(
@@ -304,6 +326,7 @@ class NewsletterAPITests(APITestCase):
         )
 
     def test_editor_can_create_newsletter(self):
+        """Verify editors can create newsletters."""
         self.authenticate(self.editor)
 
         response = self.client.post(
@@ -319,6 +342,7 @@ class NewsletterAPITests(APITestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_editor_can_delete_newsletter(self):
+        """Verify editors can delete newsletters."""
         self.authenticate(self.editor)
 
         response = self.client.delete(
@@ -331,6 +355,7 @@ class NewsletterAPITests(APITestCase):
         self.assertEqual(response.status_code, 204)
 
     def test_unauthenticated_user_cannot_view_newsletters(self):
+        """Verify unauthenticated users cannot view newsletters."""
         response = self.client.get(
             reverse("newsletter-list-create")
         )
@@ -342,6 +367,7 @@ class ApprovalWorkflowTests(APITestCase):
     """Test editor approval, email notification, and API logging."""
 
     def setUp(self):
+        """Create users, a publisher, and an unapproved article."""
         self.reader = User.objects.create_user(
             username="approval_reader",
             password="ReaderPass123!",
@@ -379,6 +405,7 @@ class ApprovalWorkflowTests(APITestCase):
         )
 
     def authenticate(self, user):
+        """Authenticate the test client as the specified user."""
         self.client.force_login(user)
 
     @patch("news.views.requests.post")
@@ -388,6 +415,7 @@ class ApprovalWorkflowTests(APITestCase):
         mock_send_mail,
         mock_post,
     ):
+        """Verify editors can approve articles and trigger notifications."""
         self.authenticate(self.editor)
 
         response = self.client.post(
@@ -425,6 +453,7 @@ class ApprovalWorkflowTests(APITestCase):
         mock_send_mail,
         mock_post,
     ):
+        """Verify approved article notifications are sent to subscribers."""
         self.authenticate(self.editor)
 
         self.client.post(
@@ -444,6 +473,7 @@ class ApprovalWorkflowTests(APITestCase):
         )
 
     def test_reader_cannot_approve_article(self):
+        """Verify readers cannot approve articles."""
         self.authenticate(self.reader)
 
         response = self.client.post(
@@ -460,6 +490,7 @@ class ApprovalWorkflowTests(APITestCase):
         self.assertFalse(self.article.approved)
 
     def test_journalist_cannot_approve_article(self):
+        """Verify journalists cannot approve articles."""
         self.authenticate(self.journalist)
 
         response = self.client.post(
@@ -480,6 +511,7 @@ class ApprovalWorkflowTests(APITestCase):
         self,
         mock_serializer_class,
     ):
+        """Verify the approved article API endpoint accepts valid POST data."""
         mock_serializer = mock_serializer_class.return_value
         mock_serializer.is_valid.return_value = True
         mock_serializer.data = {
@@ -511,6 +543,7 @@ class RoleAndAuthenticationTests(APITestCase):
     """Test role-based groups and token authentication."""
 
     def test_reader_is_assigned_reader_group(self):
+        """Verify readers are automatically assigned to the Reader group."""
         reader = User.objects.create_user(
             username="group_reader",
             password="ReaderPass123!",
@@ -522,6 +555,7 @@ class RoleAndAuthenticationTests(APITestCase):
         )
 
     def test_journalist_is_assigned_journalist_group(self):
+        """Verify journalists are automatically assigned to the Journalist group."""
         journalist = User.objects.create_user(
             username="group_journalist",
             password="JournalistPass123!",
@@ -533,6 +567,7 @@ class RoleAndAuthenticationTests(APITestCase):
         )
 
     def test_editor_is_assigned_editor_group(self):
+        """Verify editors are automatically assigned to the Editor group."""
         editor = User.objects.create_user(
             username="group_editor",
             password="EditorPass123!",
@@ -544,6 +579,7 @@ class RoleAndAuthenticationTests(APITestCase):
         )
 
     def test_token_endpoint_authenticates_user(self):
+        """Verify valid credentials return an authentication token."""
         user = User.objects.create_user(
             username="token_user",
             password="TokenPass123!",
@@ -563,6 +599,7 @@ class RoleAndAuthenticationTests(APITestCase):
         self.assertIn("token", response.data)
 
     def test_invalid_token_credentials_are_rejected(self):
+        """Verify invalid credentials are rejected by the token endpoint."""
         response = self.client.post(
             "/api/token/",
             {

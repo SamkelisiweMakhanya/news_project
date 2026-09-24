@@ -1,3 +1,12 @@
+"""
+API views for the news application.
+
+This module defines API views and permission classes for managing
+articles and newsletters. It handles authentication, role-based
+permissions, article subscriptions, article approval, and newsletter
+management.
+"""
+
 from typing import ClassVar
 
 from rest_framework import generics, permissions
@@ -17,6 +26,7 @@ class IsEditorOrJournalist(permissions.BasePermission):
     """Allow changes only to editors and journalists."""
 
     def has_permission(self, request, view):
+        """Check whether the authenticated user is an editor or journalist."""
         return (
             request.user.is_authenticated
             and request.user.role
@@ -31,6 +41,7 @@ class IsJournalist(permissions.BasePermission):
     """Allow article creation only to journalists."""
 
     def has_permission(self, request, view):
+        """Check whether the authenticated user is a journalist."""
         return (
             request.user.is_authenticated
             and request.user.role == request.user.Role.JOURNALIST
@@ -43,6 +54,7 @@ class ArticleListCreateView(generics.ListCreateAPIView):
     serializer_class = ArticleSerializer
 
     def get_queryset(self):
+        """Return articles visible to the current user's role."""
         queryset = Article.objects.all().select_related(
             "author",
             "publisher",
@@ -54,12 +66,14 @@ class ArticleListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def get_permissions(self):
+        """Return permissions based on the HTTP request method."""
         if self.request.method == "POST":
             return [IsJournalist()]
 
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
+        """Save a new article with the authenticated user as its author."""
         serializer.save(author=self.request.user)
 
 
@@ -69,6 +83,8 @@ class SubscribedArticlesView(APIView):
     permission_classes: ClassVar[list] = [permissions.IsAuthenticated]
 
     def get(self, request):
+        """Return approved articles from subscribed publishers or journalists.
+        """
         if request.user.role != request.user.Role.READER:
             return Response(
                 {
@@ -105,6 +121,7 @@ class ArticleDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ArticleSerializer
 
     def get_queryset(self):
+        """Return articles available to the current user's role."""
         queryset = Article.objects.all().select_related(
             "author",
             "publisher",
@@ -116,12 +133,14 @@ class ArticleDetailView(generics.RetrieveUpdateDestroyAPIView):
         return queryset
 
     def get_permissions(self):
+        """Return permissions based on the HTTP request method."""
         if self.request.method in ("PUT", "PATCH", "DELETE"):
             return [IsEditorOrJournalist()]
 
         return [permissions.IsAuthenticated()]
 
     def perform_update(self, serializer):
+        """Save the updated article."""
         serializer.save()
 
 
@@ -131,6 +150,7 @@ class ApprovedArticleView(APIView):
     permission_classes: ClassVar[list] = [AllowAny]
 
     def post(self, request):
+        """Validate an approved article and return the serialized data."""
         serializer = ApprovedArticleSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -154,6 +174,7 @@ class NewsletterListCreateView(generics.ListCreateAPIView):
     serializer_class = NewsletterSerializer
 
     def get_queryset(self):
+        """Return all newsletters with related authors and articles loaded."""
         return Newsletter.objects.all().select_related(
             "author",
         ).prefetch_related(
@@ -161,12 +182,14 @@ class NewsletterListCreateView(generics.ListCreateAPIView):
         )
 
     def get_permissions(self):
+        """Return permissions based on the HTTP request method."""
         if self.request.method == "POST":
             return [IsEditorOrJournalist()]
 
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
+        """Save a new newsletter with the authenticated user as its author."""
         serializer.save(author=self.request.user)
 
 
@@ -176,6 +199,7 @@ class NewsletterDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NewsletterSerializer
 
     def get_queryset(self):
+        """Return all newsletters with related authors and articles loaded."""
         return Newsletter.objects.all().select_related(
             "author",
         ).prefetch_related(
@@ -183,10 +207,12 @@ class NewsletterDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
     def get_permissions(self):
+        """Return permissions based on the HTTP request method."""
         if self.request.method in ("PUT", "PATCH", "DELETE"):
             return [IsEditorOrJournalist()]
 
         return [permissions.IsAuthenticated()]
 
     def perform_update(self, serializer):
+        """Save the updated newsletter."""
         serializer.save()
