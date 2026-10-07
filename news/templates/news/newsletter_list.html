@@ -1,0 +1,45 @@
+{% extends "news/base.html" %}
+
+{% block title %}Newsletters{% endblock %}
+
+{% block content %}
+<section class="content-section">
+    <div class="section-heading">
+        <h1>Newsletter archive</h1>
+
+        {% if user.role == "JOURNALIST" or user.role == "EDITOR" %}
+            <a class="button" href="{% url 'newsletter-create' %}">
+                New newsletter
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="card-grid">
+        {% for newsletter in newsletters %}
+            <article class="card">
+                <p class="meta">
+                    {{ newsletter.created_at|date:"d M Y" }}
+                </p>
+
+                <h2>
+                    <a href="{% url 'newsletter-detail' newsletter.id %}">
+                        {{ newsletter.title }}
+                    </a>
+                </h2>
+
+                <p>
+                    {{ newsletter.description|truncatewords:30 }}
+                </p>
+
+                <p class="meta">
+                    By {{ newsletter.author.username }}
+                </p>
+            </article>
+        {% empty %}
+            <div class="empty-state">
+                <p>No newsletters available.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

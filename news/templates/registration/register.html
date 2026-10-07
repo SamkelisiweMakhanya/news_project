@@ -1,0 +1,42 @@
+{% extends "news/base.html" %}
+
+{% block title %}Register | News Application{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card form-card-wide">
+        <p class="eyebrow">Join the platform</p>
+        <h1>Create your account</h1>
+        <p class="form-intro">
+            Choose the role that matches how you will use the application.
+        </p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small>{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="field-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="button">Create account</button>
+        </form>
+
+        <p class="form-footer">
+            Already have an account?
+            <a href="{% url 'login' %}">Log in</a>.
+        </p>
+    </div>
+</div>
+{% endblock %}

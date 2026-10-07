@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}News Application{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'news/style.css' %}">
+</head>
+<body>
+<header class="site-header">
+<nav class="navbar" aria-label="Main navigation">
+    <a class="brand" href="{% url 'home' %}">News Application</a>
+    <div class="nav-links">
+        <a href="{% url 'home' %}">Home</a>
+        {% if user.is_authenticated %}
+            <a href="{% url 'article-list' %}">Articles</a>
+            <a href="{% url 'newsletter-list' %}">Newsletters</a>
+            {% if user.role == "READER" %}
+                <a href="{% url 'feed' %}">My Feed</a>
+                <a href="{% url 'subscriptions' %}">Subscriptions</a>
+            {% elif user.role == "JOURNALIST" %}
+                <a href="{% url 'article-create' %}">New Article</a>
+                <a href="{% url 'newsletter-create' %}">New Newsletter</a>
+            {% elif user.role == "EDITOR" %}
+                <a href="{% url 'article-review' %}">Review Queue</a>
+                <a href="{% url 'publisher-list' %}">Publishers</a>
+                <a href="{% url 'newsletter-create' %}">New Newsletter</a>
+            {% endif %}
+            <span class="user-badge">{{ user.username }} ({{ user.get_role_display }})</span>
+            <form method="post" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}<button type="submit" class="button button-secondary">Logout</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a>
+            <a class="button" href="{% url 'register' %}">Register</a>
+        {% endif %}
+    </div>
+</nav>
+</header>
+{% if messages %}<div class="messages">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+<main class="container">{% block content %}{% endblock %}</main>
+<footer class="site-footer"><p>&copy; {% now "Y" %} News Application</p></footer>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends "news/base.html" %}
+
+{% block title %}Review Articles | News Application{% endblock %}
+
+{% block content %}
+<section class="content-section">
+    <p class="eyebrow">Editor area</p>
+    <h1>Article review queue</h1>
+    <p>Review articles waiting for approval.</p>
+
+    {% if articles %}
+        <div class="card-grid">
+            {% for article in articles %}
+                <article class="card">
+                    <p class="meta">{{ article.created_at|date:"d M Y H:i" }}</p>
+                    <h2>{{ article.title }}</h2>
+                    <p>{{ article.content|truncatewords:40 }}</p>
+                    <p class="meta">Author: {{ article.author.username }}</p>
+                    {% if article.publisher %}
+                        <p class="meta">Publisher: {{ article.publisher.name }}</p>
+                    {% else %}
+                        <p class="meta">Independent article</p>
+                    {% endif %}
+                    <form method="post" action="{% url 'approve-article' article.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="button">Approve article</button>
+                    </form>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>Nothing to review</h2>
+            <p>There are currently no pending articles.</p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

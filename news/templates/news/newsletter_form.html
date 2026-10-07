@@ -1,0 +1,27 @@
+{% extends "news/base.html" %}
+
+{% block title %}{{ heading }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card form-card-wide">
+        <h1>{{ heading }}</h1>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="error">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {{ form.as_p }}
+
+            <button class="button" type="submit">
+                Save newsletter
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

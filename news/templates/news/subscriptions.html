@@ -1,0 +1,59 @@
+{% extends "news/base.html" %}
+
+{% block title %}Subscriptions{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card form-card-wide">
+        <h1>Manage subscriptions</h1>
+
+        <form method="post" action="{% url 'update-subscriptions' %}">
+            {% csrf_token %}
+
+            <h2>Publishers</h2>
+
+            {% for publisher in publishers %}
+                <label>
+                    <input
+                        type="checkbox"
+                        name="publishers"
+                        value="{{ publisher.id }}"
+                        {% if publisher in user.subscribed_publishers.all %}
+                            checked
+                        {% endif %}
+                    >
+                    {{ publisher.name }}
+                </label>
+                <br>
+            {% empty %}
+                <p>No publishers available.</p>
+            {% endfor %}
+
+            <h2>Journalists</h2>
+
+            {% for journalist in journalists %}
+                <label>
+                    <input
+                        type="checkbox"
+                        name="journalists"
+                        value="{{ journalist.id }}"
+                        {% if journalist in user.subscribed_journalists.all %}
+                            checked
+                        {% endif %}
+                    >
+                    {{ journalist.get_full_name|default:journalist.username }}
+                </label>
+                <br>
+            {% empty %}
+                <p>No journalists available.</p>
+            {% endfor %}
+
+            <br>
+
+            <button class="button" type="submit">
+                Save subscriptions
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

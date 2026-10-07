@@ -1,0 +1,63 @@
+{% extends "news/base.html" %}
+
+{% block title %}Publishers{% endblock %}
+
+{% block content %}
+<section class="content-section">
+    <div class="section-heading">
+        <h1>Publishers</h1>
+
+        <a class="button" href="{% url 'publisher-create' %}">
+            New publisher
+        </a>
+    </div>
+
+    <div class="card-grid">
+        {% for publisher in publishers %}
+            <article class="card">
+                <h2>{{ publisher.name }}</h2>
+
+                <p>{{ publisher.description }}</p>
+
+                <p class="meta">
+                    Staff:
+
+                    {% for member in publisher.members.all %}
+                        {{ member.username }}
+                        {% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        None
+                    {% endfor %}
+                </p>
+
+                <div class="actions">
+                    <a
+                        class="button"
+                        href="{% url 'publisher-edit' publisher.id %}"
+                    >
+                        Edit
+                    </a>
+
+                    <form
+                        method="post"
+                        action="{% url 'publisher-delete' publisher.id %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            class="button button-secondary"
+                            type="submit"
+                        >
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <div class="empty-state">
+                <p>No publishers yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

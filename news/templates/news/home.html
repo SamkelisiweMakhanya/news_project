@@ -1,0 +1,103 @@
+{% extends "news/base.html" %}
+
+{% block title %}Home | News Application{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">News platform</p>
+
+    <h1>Stay informed with trusted news.</h1>
+
+    <p>
+        Read approved journalism, follow publishers and journalists,
+        and manage publishing workflows in one place.
+    </p>
+
+    {% if not user.is_authenticated %}
+        <div class="actions">
+            <a class="button" href="{% url 'register' %}">
+                Create an account
+            </a>
+
+            <a class="button button-secondary" href="{% url 'login' %}">
+                Log in
+            </a>
+        </div>
+    {% endif %}
+</section>
+
+{% if feed is not None %}
+    <section class="content-section">
+        <h2>Your personalised feed</h2>
+
+        {% if feed %}
+            <div class="card-grid">
+                {% for article in feed %}
+                    <article class="card">
+                        <p class="meta">
+                            {{ article.created_at|date:"d M Y" }}
+
+                            {% if article.publisher %}
+                                &middot; {{ article.publisher.name }}
+                            {% endif %}
+                        </p>
+
+                        <h3>
+                            <a href="{% url 'article-detail' article.id %}">
+                                {{ article.title }}
+                            </a>
+                        </h3>
+
+                        <p>{{ article.content|truncatewords:35 }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>
+                    No subscribed content yet.
+                    <a href="{% url 'subscriptions' %}">
+                        Manage subscriptions
+                    </a>.
+                </p>
+            </div>
+        {% endif %}
+    </section>
+{% endif %}
+
+<section class="content-section">
+    <h2>Latest approved stories</h2>
+
+    {% if approved_articles %}
+        <div class="card-grid">
+            {% for article in approved_articles %}
+                <article class="card">
+                    <p class="meta">
+                        {{ article.created_at|date:"d M Y" }}
+
+                        {% if article.publisher %}
+                            &middot; {{ article.publisher.name }}
+                        {% endif %}
+                    </p>
+
+                    <h3>
+                        <a href="{% url 'article-detail' article.id %}">
+                            {{ article.title }}
+                        </a>
+                    </h3>
+
+                    <p>{{ article.content|truncatewords:35 }}</p>
+
+                    <p class="meta">
+                        By {{ article.author.username }}
+                    </p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No approved articles are available yet.</p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

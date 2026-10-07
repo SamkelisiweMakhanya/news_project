@@ -1,0 +1,40 @@
+{% extends "news/base.html" %}
+
+{% block title %}Login | News Application{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <p class="eyebrow">Welcome back</p>
+        <h1>Log in</h1>
+        <p class="form-intro">Enter your account details to continue.</p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            {% for field in form %}
+                <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small>{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="field-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="button">Log in</button>
+        </form>
+
+        <p class="form-footer">
+            Don't have an account?
+            <a href="{% url 'register' %}">Create one</a>.
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "news/base.html" %}
+
+{% block title %}My Feed{% endblock %}
+
+{% block content %}
+<section class="content-section">
+    <h1>My personalised feed</h1>
+
+    <div class="card-grid">
+        {% for article in articles %}
+            <article class="card">
+                <p class="meta">
+                    {{ article.created_at|date:"d M Y" }}
+                </p>
+
+                <h2>
+                    <a href="{% url 'article-detail' article.id %}">
+                        {{ article.title }}
+                    </a>
+                </h2>
+
+                <p>{{ article.content|truncatewords:40 }}</p>
+
+                <p class="meta">
+                    By {{ article.author.username }}
+                    {% if article.publisher %}
+                        &middot; {{ article.publisher.name }}
+                    {% endif %}
+                </p>
+            </article>
+        {% empty %}
+            <div class="empty-state">
+                <p>
+                    No matching content.
+                    <a href="{% url 'subscriptions' %}">
+                        Choose subscriptions
+                    </a>.
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

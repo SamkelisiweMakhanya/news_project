@@ -1,0 +1,60 @@
+{% extends "news/base.html" %}
+
+{% block title %}{{ newsletter.title }}{% endblock %}
+
+{% block content %}
+<section class="content-section">
+    <p class="meta">
+        {{ newsletter.created_at|date:"d M Y" }}
+        &middot;
+        By {{ newsletter.author.username }}
+    </p>
+
+    <h1>{{ newsletter.title }}</h1>
+
+    <p>{{ newsletter.description|linebreaks }}</p>
+
+    <h2>Articles</h2>
+
+    <div class="card-grid">
+        {% for article in newsletter.articles.all %}
+            <article class="card">
+                <h3>
+                    <a href="{% url 'article-detail' article.id %}">
+                        {{ article.title }}
+                    </a>
+                </h3>
+
+                <p>{{ article.content|truncatewords:30 }}</p>
+            </article>
+        {% empty %}
+            <p>No articles in this newsletter.</p>
+        {% endfor %}
+    </div>
+
+    {% if user.role == "EDITOR" or user == newsletter.author and user.role == "JOURNALIST" %}
+        <div class="actions">
+            <a
+                class="button"
+                href="{% url 'newsletter-edit' newsletter.id %}"
+            >
+                Edit
+            </a>
+
+            <form
+                method="post"
+                action="{% url 'newsletter-delete' newsletter.id %}"
+            >
+                {% csrf_token %}
+
+                <button
+                    class="button button-secondary"
+                    type="submit"
+                >
+                    Delete
+                </button>
+            </form>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
