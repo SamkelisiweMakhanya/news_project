@@ -12,9 +12,36 @@ For more information on Django settings, see:
 https://docs.djangoproject.com/en/6.1/topics/settings/
 """
 
+
 import os
 from pathlib import Path
 
+# Build paths inside the project.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def load_env_file():
+    """Load values from a local .env file without overriding existing variables."""
+    env_file = BASE_DIR / ".env"
+
+    if not env_file.is_file():
+        return
+
+    for line in env_file.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env_file()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,10 +50,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-change-this-in-development",
-)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise ValueError(
+        "DJANGO_SECRET_KEY must be set in the environment or .env file."
+    )
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
@@ -38,6 +67,31 @@ ALLOWED_HOSTS = [
     ).split(",")
     if host.strip()
 ]
+
+# Production security settings, configurable through environment variables
+SECURE_SSL_REDIRECT = (
+    os.getenv("DJANGO_SECURE_SSL_REDIRECT", "False").lower() == "true"
+)
+
+SESSION_COOKIE_SECURE = (
+    os.getenv("DJANGO_SESSION_COOKIE_SECURE", "False").lower() == "true"
+)
+
+CSRF_COOKIE_SECURE = (
+    os.getenv("DJANGO_CSRF_COOKIE_SECURE", "False").lower() == "true"
+)
+
+SECURE_HSTS_SECONDS = int(
+    os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0")
+)
+
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    os.getenv("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() == "true"
+)
+
+SECURE_HSTS_PRELOAD = (
+    os.getenv("DJANGO_SECURE_HSTS_PRELOAD", "False").lower() == "true"
+)
 
 # Application definition
 
