@@ -21,6 +21,58 @@ from .models import Article, Newsletter, Publisher, User
 UserModel = get_user_model()
 
 
+def notify_article_published(request, article):
+    """Email subscribers and send an audit record after publication."""
+
+    if article.publisher_id:
+        subscribers = UserModel.objects.filter(
+            subscribed_publishers=article.publisher
+        )
+    else:
+        subscribers = UserModel.objects.filter(
+            subscribed_journalists=article.author
+        )
+
+    emails = list(
+        subscribers.exclude(email="").values_list("email", flat=True)
+    )
+
+    if emails:
+        send_mail(
+            subject=f"New published article: {article.title}",
+            message=f"{article.title}\n\n{article.content}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=emails,
+            fail_silently=True,
+        )
+
+    try:
+        requests.post(
+            request.build_absolute_uri("/api/approved/"),
+
+            json={
+                "id": article.id,
+                "title": article.title,
+                "content": article.content,
+                "author": article.author_id,
+                "publisher": article.publisher_id,
+                "approved": True,
+                "created_at": article.created_at.isoformat(),
+            },
+            headers={
+                "X-Internal-API-Secret": (
+                    settings.APPROVED_ARTICLE_API_SECRET
+                ),
+            },
+            timeout=10,
+        )
+    except requests.RequestException:
+        messages.warning(
+            request,
+            "Article published, but API audit logging was unavailable.",
+        )
+
+
 def role_required(*roles):
     """Restrict a view to authenticated users with specific roles."""
 
@@ -178,57 +230,48 @@ def article_review(request):
     return render(request, "news/article_review.html", {"articles": articles})
 
 
+@role_required(User.Role.JOURNALIST)
+@require_POST
+def publish_independent_article(request, article_id):
+    """Allow a journalist to publish their own independent article."""
+
+    article = get_object_or_404(
+        Article,
+        pk=article_id,
+        author=request.user,
+        publisher__isnull=True,
+    )
+
+    if article.approved:
+        messages.info(request, "This article is already published.")
+        return redirect("article-detail", article_id=article.id)
+
+    article.approved = True
+    article.save(update_fields=["approved"])
+
+    notify_article_published(request, article)
+
+    messages.success(request, "Your independent article is now published.")
+    return redirect("article-detail", article_id=article.id)
+
+
 @role_required(User.Role.EDITOR)
 @require_POST
 def approve_article(request, article_id):
-    """Approve an article, notify subscribers, and POST an audit record."""
+    """Approve a pending article and notify subscribers once."""
+
     article = get_object_or_404(
         Article,
         pk=article_id,
         approved=False,
+        publisher__isnull=False,
     )
+
     article.approved = True
     article.save(update_fields=["approved"])
 
-    if article.publisher_id:
-        subscribers = UserModel.objects.filter(
-            subscribed_publishers=article.publisher
-        )
-    else:
-        subscribers = UserModel.objects.filter(
-            subscribed_journalists=article.author
-        )
-    emails = list(
-        subscribers.exclude(email="").values_list("email", flat=True)
-    )
-    if emails:
-        send_mail(
-            f"New approved article: {article.title}",
-            f"{article.title}\n\n{article.content}",
-            settings.DEFAULT_FROM_EMAIL,
-            recipient_list=emails,
-            fail_silently=True,
-        )
-    try:
-        response = requests.post(
-            request.build_absolute_uri("/api/approved/"),
-            json={
-                "id": article.id,
-                "title": article.title,
-                "content": article.content,
-                "author": article.author_id,
-                "publisher": article.publisher_id,
-                "approved": True,
-                "created_at": article.created_at.isoformat(),
-            },
-            timeout=10,
-        )
-        response.raise_for_status()
-    except requests.RequestException:
-        messages.warning(
-            request,
-            "Article approved, but API audit logging was unavailable.",
-        )
+    notify_article_published(request, article)
+
     messages.success(request, "Article approved successfully.")
     return redirect("article-review")
 
@@ -250,15 +293,24 @@ def newsletter_list(request):
 
 @login_required
 def newsletter_detail(request, newsletter_id):
-    """Display a newsletter."""
+    """Display a newsletter with role-appropriate article visibility."""
     newsletter = get_object_or_404(
         Newsletter.objects.prefetch_related("articles"),
         pk=newsletter_id,
     )
+
+    articles = newsletter.articles.all()
+
+    if request.user.role == User.Role.READER:
+        articles = articles.filter(approved=True)
+
     return render(
         request,
         "news/newsletter_detail.html",
-        {"newsletter": newsletter},
+        {
+            "newsletter": newsletter,
+            "articles": articles,
+        },
     )
 
 

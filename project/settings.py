@@ -12,7 +12,6 @@ For more information on Django settings, see:
 https://docs.djangoproject.com/en/6.1/topics/settings/
 """
 
-
 import os
 from pathlib import Path
 
@@ -21,7 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def load_env_file():
-    """Load values from a local .env file without overriding existing variables."""
+    """Load values from a local .env file without overriding
+    existing variables.
+    """
     env_file = BASE_DIR / ".env"
 
     if not env_file.is_file():
@@ -42,8 +43,6 @@ def load_env_file():
 
 
 load_env_file()
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -86,7 +85,11 @@ SECURE_HSTS_SECONDS = int(
 )
 
 SECURE_HSTS_INCLUDE_SUBDOMAINS = (
-    os.getenv("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() == "true"
+    os.getenv(
+        "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS",
+        "False",
+    ).lower()
+    == "true"
 )
 
 SECURE_HSTS_PRELOAD = (
@@ -137,28 +140,36 @@ TEMPLATES = [
 WSGI_APPLICATION = "project.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+# Database: MariaDB is the default.
+# SQLite can be selected explicitly for optional local testing.
 
-DB_ENGINE = os.getenv("DB_ENGINE", "sqlite3")
+DB_ENGINE = os.getenv("DB_ENGINE", "mysql").lower()
+
 if DB_ENGINE == "mysql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
             "NAME": os.getenv("DB_NAME", "news_db"),
-            "USER": os.getenv("DB_USER", "root"),
+            "USER": os.getenv("DB_USER", "news_user"),
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST", "localhost"),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
             "PORT": os.getenv("DB_PORT", "3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+            },
         }
     }
-else:
+elif DB_ENGINE == "sqlite3":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+else:
+    raise ValueError(
+        "DB_ENGINE must be either 'mysql' or 'sqlite3'."
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -216,6 +227,10 @@ AUTH_USER_MODEL = "news.User"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@news.local")
+APPROVED_ARTICLE_API_SECRET = os.getenv(
+    "APPROVED_ARTICLE_API_SECRET",
+    "",
+)
 
 
 # Django REST Framework configuration.

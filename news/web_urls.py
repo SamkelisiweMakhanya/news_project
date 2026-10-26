@@ -18,6 +18,8 @@ from .views import (
     newsletter_detail,
     newsletter_edit,
     newsletter_list,
+    publish_independent_article,
+    # Keep all your other existing imports here.
     publisher_create,
     publisher_delete,
     publisher_edit,
@@ -38,6 +40,11 @@ urlpatterns = [
     path("accounts/logout/", LogoutView.as_view(), name="logout"),
     path("articles/", article_list, name="article-list"),
     path("articles/new/", article_create, name="article-create"),
+    path(
+        "articles/<int:article_id>/approve/",
+        approve_article,
+        name="approve-article",
+    ),
     path("articles/<int:article_id>/", article_detail, name="article-detail"),
     path("articles/<int:article_id>/edit/", article_edit, name="article-edit"),
     path(
@@ -46,11 +53,6 @@ urlpatterns = [
         name="article-delete",
     ),
     path("articles/review/", article_review, name="article-review"),
-    path(
-        "articles/<int:article_id>/approve/",
-        approve_article,
-        name="approve-article",
-    ),
     path("newsletters/", newsletter_list, name="newsletter-list"),
     path("newsletters/new/", newsletter_create, name="newsletter-create"),
     path(
@@ -81,6 +83,11 @@ urlpatterns = [
         "publishers/<int:publisher_id>/edit/",
         publisher_edit,
         name="publisher-edit",
+    ),
+    path(
+        "articles/<int:article_id>/publish/",
+        publish_independent_article,
+        name="publish-independent-article",
     ),
     path(
         "publishers/<int:publisher_id>/delete/",

@@ -1,79 +1,225 @@
 # News Application
 
-A Django news platform built for the HyperionDev capstone brief. It provides role-based publishing, editorial approval, subscriptions, newsletters, a REST API, automated tests, and MariaDB support.
+A Django news platform developed for the HyperionDev capstone project. It supports role-based publishing, editorial approval, reader subscriptions, newsletters, a REST API, automated tests, and MariaDB.
 
-## Roles and workflows
+## Features
 
-- **Reader:** register/login, browse approved articles and newsletters, subscribe to publishers and journalists, and view a personalised feed.
-- **Journalist:** create, view, edit, and delete independent and publisher-associated articles; create and manage newsletters made from their approved articles.
-- **Editor:** review and approve pending articles, manage articles/newsletters, create and manage publishers, and link journalists/editors to publishers.
+- **Reader:** Browse approved articles and newsletters, subscribe to publishers and journalists, and view a personalised feed.
+- **Journalist:** Create and manage independent or publisher-associated articles, and create newsletters using approved articles.
+- **Editor:** Review and approve publisher-associated articles, manage articles and newsletters, and create publishers with editors and journalists.
+- **Email notifications:** Notify relevant subscribers when an article is published.
+- **REST API:** Retrieve and manage supported resources using Django REST Framework and token authentication.
+- **Automated tests:** Test application behaviour, permissions, and API endpoints.
 
-Core workflows are available through normal web pages. Django Admin is retained only as an optional administration tool.
+## Technology
 
-## API
+- Python
+- Django
+- Django REST Framework
+- MariaDB
+- HTML and CSS
 
-- `POST /api/token/` - obtain a DRF token.
-- `GET /api/articles/` - all approved articles for authenticated users.
-- `GET /api/articles/subscribed/` - approved articles matching the authenticated reader's subscriptions.
-- `GET /api/articles/<id>/` - retrieve an article.
-- `POST /api/articles/` - journalists only.
-- `PUT/PATCH/DELETE /api/articles/<id>/` - editors or the owning journalist.
-- `GET/POST /api/newsletters/` - view or create newsletters according to role.
-- `GET/PUT/PATCH/DELETE /api/newsletters/<id>/` - newsletter management.
-- `GET/POST /api/publishers/` and `GET/PUT/PATCH/DELETE /api/publishers/<id>/` - publisher management, with creation/changes restricted to editors.
-- `POST /api/approved/` - internal approval-audit endpoint used by the approval workflow.
+## Installation and Setup
 
-Use the token in requests as `Authorization: Token <token>`.
+### 1. Clone the Repository
 
-## Installation
+Replace `<repository-url>` with the Git URL for your project repository.
 
-1. Create a virtual environment:
+```bash
+git clone <repository-url>
+cd news_project
+```
 
+Run the commands from the directory containing `manage.py`.
+
+### 2. Create and Activate a Virtual Environment
+
+**Windows PowerShell**
+
+```powershell
 python -m venv venv
-# Windows PowerShell
 .\venv\Scripts\Activate.ps1
-# macOS/Linux
+```
+
+If PowerShell blocks script activation, you can use Command Prompt instead:
+
+```bat
+venv\Scripts\activate.bat
+```
+
+**macOS/Linux**
+
+```bash
+python3 -m venv venv
 source venv/bin/activate
+```
 
-2. Install dependencies:
+### 3. Install Dependencies
 
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-3. For quick local development, SQLite is the default:
+The project uses `mysqlclient` for MariaDB connectivity and `requests` for HTTP requests. The project settings load `.env` using a custom loader, so `python-dotenv` is not required.
 
-python manage.py migrate
-python manage.py runserver
+### 4. Install and Configure MariaDB
 
-4. To use the required MariaDB database, set:
+Install MariaDB Server and ensure the database service is running.
+
+Log in to MariaDB using an account with permission to create databases and users. Run the following SQL statements, replacing the example password with a strong password:
+
+```sql
+CREATE DATABASE news_db
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'news_user'@'localhost'
+    IDENTIFIED BY 'replace-with-a-strong-password';
+
+GRANT ALL PRIVILEGES ON news_db.*
+    TO 'news_user'@'localhost';
+
+FLUSH PRIVILEGES;
+```
+
+Keep the database name, username, password, host, and port available for the next step.
+
+### 5. Configure Environment Variables
+
+If the project includes `.env.example`, copy it to `.env` in the project root.
+
+**Windows PowerShell**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**macOS/Linux**
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and configure the values for your environment. For example:
+
+```dotenv
+DJANGO_SECRET_KEY=replace-with-a-long-random-secret
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 
 DB_ENGINE=mysql
 DB_NAME=news_db
-DB_USER=your_user
-DB_PASSWORD=your_password
+DB_USER=news_user
+DB_PASSWORD=replace-with-a-strong-password
 DB_HOST=localhost
 DB_PORT=3306
 
-Also set a secure `DJANGO_SECRET_KEY` and, when needed, `DJANGO_ALLOWED_HOSTS`.
+DEFAULT_FROM_EMAIL=noreply@news.local
+```
 
-5. Run automated tests:
+Generate a unique, secure Django secret key and replace the example value. Make sure the database password matches the password configured in MariaDB.
 
+**Important security notes:**
+
+- Keep `.env` out of version control.
+- Never commit real passwords or production secrets.
+- For production, set `DJANGO_DEBUG=False`.
+- Configure `DJANGO_ALLOWED_HOSTS` with your actual production domain names.
+- Configure an appropriate email backend and HTTPS security settings before deployment.
+
+The environment variable names must match those read by `project/settings.py`.
+
+### 6. Apply Database Migrations
+
+From the project root, run:
+
+```bash
+python manage.py check
+python manage.py migrate
+```
+
+If you make model changes that require new migrations, create and review them before applying them:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 7. Create an Administrator
+
+```bash
+python manage.py createsuperuser
+```
+
+Follow the prompts to create the administrator account.
+
+Public registration creates Reader accounts. Assign Editor and Journalist roles only through a trusted administrative process.
+
+### 8. Start the Development Server
+
+```bash
+python manage.py runserver
+```
+
+Open the application in your browser:
+
+[http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+Use Django Admin at [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/) for administrative access.
+
+The Django development server is intended for local development, not production deployment.
+
+### 9. Run the Automated Tests
+
+```bash
 python manage.py test
+```
 
-## Approval workflow
+The tests use Django's test database. Make sure your database configuration and required dependencies are set up correctly before running them.
 
-An editor approves an article from the web review queue. Approval sends email to matching subscribers and POSTs an audit record to `/api/approved/`. The API logging failure is handled defensively so an unavailable audit endpoint does not undo a successful editorial approval.
+## Article Approval and Publication
 
-## Database design
+Independent journalists can publish their own independent articles using the independent publishing workflow. Articles associated with a publisher follow the editor approval workflow.
 
-The custom `User` model stores the role and reader subscription relationships. `Publisher` has many editors/journalists through its `members` relationship. `Article` belongs to an author and optionally a publisher. `Newsletter` belongs to a journalist/editor and contains a many-to-many collection of articles.
+When an article is published or approved, the application attempts to notify relevant subscribers by email and POST an approval payload to `/api/approved/`. The endpoint validates the payload and returns a response; it does not persist an audit record. If the request fails, the article's publication is not rolled back.
 
-## Code quality
+During development, Django's console email backend can display outgoing messages in the terminal instead of delivering them to real recipients. Configure a suitable email backend for your environment if actual email delivery is required.
 
-The project uses Django forms and DRF serializers for validation, role-aware permissions, exception handling around external HTTP calls, descriptive names, modular views/forms, and automated tests for successful and failed requests.
+## REST API
 
-## Project structure
+The API uses Django REST Framework. Obtain an authentication token through the token endpoint and include it in subsequent requests.
 
-## Project structure
+Example authorization header:
+
+Authorization: Token <your-token>
+
+### Available Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/token/` | Obtain an authentication token |
+| `GET` | `/api/articles/` | List approved articles available to the authenticated user |
+| `GET` | `/api/articles/subscribed/` | Retrieve articles matching a reader's subscriptions |
+| Varies | `/api/articles/<id>/` | Retrieve or manage an article according to permissions |
+| Varies | `/api/newsletters/` | List or create newsletters according to permissions |
+| Varies | `/api/newsletters/<id>/` | Retrieve or manage a newsletter according to permissions |
+| Varies | `/api/publishers/` | List or create publishers according to permissions |
+| Varies | `/api/publishers/<id>/` | Retrieve or manage a publisher according to permissions |
+| `POST` | `/api/approved/` | Receive and validate an approval payload from the publishing workflow |
+
+Not every method is available to every role. Authentication and role-based permissions apply according to the implementation.
+
+For details about endpoint behaviour, inspect `news/urls.py`, `news/api_views.py`, and `news/serializers.py`.
+
+## Database Design
+
+- **User:** Custom user model with Reader, Editor, and Journalist roles, plus reader subscription relationships.
+- **Publisher:** Stores publisher details and staff membership.
+- **Article:** Stores the title, content, author, creation time, approval status, and optional publisher.
+- **Newsletter:** Stores newsletter details, its author, and its many-to-many relationship with articles.
+
+## Project Structure
 
 news_project/
 ├── manage.py
@@ -94,3 +240,11 @@ news_project/
 └── project/
     ├── settings.py
     └── urls.py
+
+## Development Notes
+
+- Use Django forms and Django REST Framework serializers to validate input.
+- Keep permission checks on both browser views and API endpoints.
+- Keep environment secrets outside version control.
+- Run `python manage.py check` and `python manage.py test` after making changes.
+- Review changes to database models and create migrations when necessary.

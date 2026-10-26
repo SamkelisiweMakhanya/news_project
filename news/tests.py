@@ -724,6 +724,32 @@ class NewsletterAPITests(APITestCase):
             ).exists()
         )
 
+    def test_reader_sees_only_approved_articles_in_newsletter(self):
+        """Readers should not see pending articles in a newsletter."""
+        self.client.force_login(self.reader)
+
+        pending_article = Article.objects.create(
+            title="Pending Newsletter Article",
+            content="This should remain hidden from readers.",
+            author=self.journalist,
+            approved=False,
+        )
+        self.newsletter.articles.add(pending_article)
+
+        response = self.client.get(
+            reverse(
+                "newsletter-detail",
+                kwargs={"newsletter_id": self.newsletter.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        visible_articles = list(response.context["articles"])
+
+        self.assertIn(self.article, visible_articles)
+        self.assertNotIn(pending_article, visible_articles)
+
 
 class ApprovalWorkflowTests(APITestCase):
     """Test editor approval, email notification, and API logging."""
@@ -868,37 +894,39 @@ class ApprovalWorkflowTests(APITestCase):
 
         self.assertFalse(self.article.approved)
 
-    @patch("news.api_views.ApprovedArticleSerializer")
-    def test_approved_api_endpoint_accepts_post(
-        self,
-        mock_serializer_class,
-    ):
-        """Verify the approved article API endpoint accepts valid POST data."""
-        mock_serializer = mock_serializer_class.return_value
-        mock_serializer.is_valid.return_value = True
-        mock_serializer.data = {
-            "id": self.article.id,
-            "title": self.article.title,
-            "content": self.article.content,
-            "author": self.journalist.id,
-            "publisher": self.publisher.id,
-            "approved": True,
-        }
+    def test_approved_api_endpoint_accepts_post(self):
+        """Only requests with the internal secret can verify approved
+        articles."""
+        self.article.approved = True
+        self.article.save(update_fields=["approved"])
 
+        url = reverse("approved-article")
+        payload = {"id": self.article.id}
+
+        # Requests without the internal secret must be rejected.
         response = self.client.post(
-            reverse("approved-article"),
-            {
-                "id": self.article.id,
-                "title": self.article.title,
-                "content": self.article.content,
-                "author": self.journalist.id,
-                "publisher": self.publisher.id,
-                "approved": True,
-            },
+            url,
+            payload,
             format="json",
         )
+        self.assertEqual(response.status_code, 403)
 
-        self.assertEqual(response.status_code, 201)
+        # Requests with the correct secret can verify approved articles.
+        with self.settings(
+            APPROVED_ARTICLE_API_SECRET="test-secret-for-unit-tests"
+        ):
+            response = self.client.post(
+                url,
+                payload,
+                format="json",
+                HTTP_X_INTERNAL_API_SECRET="test-secret-for-unit-tests",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["message"],
+            "Approved article verified successfully.",
+        )
 
     @patch("news.views.requests.post")
     @patch("news.views.send_mail")
@@ -916,13 +944,14 @@ class ApprovalWorkflowTests(APITestCase):
             content="Independent journalist content.",
             author=self.journalist,
             approved=False,
+            publisher=None,
         )
 
-        self.authenticate(self.editor)
+        self.authenticate(self.journalist)
 
         response = self.client.post(
             reverse(
-                "approve-article",
+                "publish-independent-article",
                 kwargs={"article_id": independent_article.pk},
             )
         )
@@ -938,10 +967,8 @@ class ApprovalWorkflowTests(APITestCase):
             "recipient_list"
         ]
 
-        self.assertIn(
-            "reader@example.com",
-            recipient_list,
-        )
+        self.assertIn("reader@example.com", recipient_list)
+        mock_post.assert_called_once()
 
     @patch(
         "news.views.requests.post",

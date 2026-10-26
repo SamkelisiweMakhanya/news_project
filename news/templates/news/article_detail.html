@@ -27,6 +27,7 @@
         {{ article.content|linebreaks }}
     </div>
 
+    
     {% if user.role == "EDITOR" or user == article.author and user.role == "JOURNALIST" %}
         <div class="actions">
             <a class="button" href="{% url 'article-edit' article.id %}">
@@ -39,7 +40,17 @@
                     Delete
                 </button>
             </form>
+
+            {% if user.role == "JOURNALIST" and user == article.author and not article.publisher and not article.approved %}
+                <form method="post" action="{% url 'publish-independent-article' article.id %}">
+                    {% csrf_token %}
+                    <button class="button" type="submit">
+                        Publish
+                    </button>
+                </form>
+            {% endif %}
         </div>
     {% endif %}
+
 </article>
 {% endblock %}

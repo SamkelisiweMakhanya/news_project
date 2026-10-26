@@ -1,8 +1,11 @@
 """REST API views and role-based permissions."""
 
+import secrets
 from typing import ClassVar
 
-from rest_framework import generics, permissions
+from django.conf import settings
+from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -127,19 +130,52 @@ class ArticleDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ApprovedArticleView(APIView):
-    """Receive the internal approval audit POST."""
+    """Accept audit notifications for articles already approved in the DB."""
 
+    # The endpoint uses a shared secret rather than a user token.
     permission_classes: ClassVar[list] = [AllowAny]
 
     def post(self, request):
-        serializer = ApprovedArticleSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        expected_secret = settings.APPROVED_ARTICLE_API_SECRET
+        supplied_secret = request.headers.get(
+            "X-Internal-API-Secret", ""
+        )
+
+        if (
+            not expected_secret
+            or not supplied_secret
+            or not secrets.compare_digest(
+                supplied_secret, expected_secret
+            )
+        ):
+            raise PermissionDenied("Invalid internal API credentials.")
+
+        article_id = request.data.get("id")
+
+        if not article_id:
+            return Response(
+                {"detail": "An article ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            article = Article.objects.select_related(
+                "author", "publisher"
+            ).get(pk=article_id, approved=True)
+        except (Article.DoesNotExist, ValueError, TypeError):
+            return Response(
+                {"detail": "No approved article matches this ID."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = ApprovedArticleSerializer(instance=article)
+
         return Response(
             {
-                "message": "Approved article received successfully.",
+                "message": "Approved article verified successfully.",
                 "article": serializer.data,
             },
-            status=201,
+            status=status.HTTP_200_OK,
         )
 
 

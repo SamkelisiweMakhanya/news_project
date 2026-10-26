@@ -17,7 +17,7 @@
     <h2>Articles</h2>
 
     <div class="card-grid">
-        {% for article in newsletter.articles.all %}
+        {% for article in articles %}
             <article class="card">
                 <h3>
                     <a href="{% url 'article-detail' article.id %}">
