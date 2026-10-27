@@ -70,9 +70,14 @@ class ArticleSerializer(serializers.ModelSerializer):
 
 
 class NewsletterSerializer(serializers.ModelSerializer):
-    """Serialize newsletters."""
+    """Serialize newsletters without exposing unapproved articles."""
 
     author = UserSerializer(read_only=True)
+    articles = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Article.objects.filter(approved=True),
+        required=False,
+    )
 
     class Meta:
         model = Newsletter
@@ -86,8 +91,18 @@ class NewsletterSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "created_at", "author")
 
+    def to_representation(self, instance):
+        """Return approved article IDs only."""
+        data = super().to_representation(instance)
+        data["articles"] = list(
+            instance.articles.filter(approved=True)
+            .values_list("pk", flat=True)
+        )
+        return data
+
     def validate_articles(self, articles):
         request = self.context.get("request")
+
         if request and request.user.role == User.Role.JOURNALIST:
             own_articles = set(
                 request.user.articles.values_list("id", flat=True)
@@ -96,6 +111,7 @@ class NewsletterSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Journalists may only include their own articles."
                 )
+
         return articles
 
 
