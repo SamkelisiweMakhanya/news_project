@@ -514,6 +514,39 @@ class NewsletterAPITests(APITestCase):
             "Weekly News",
         )
 
+    def test_newsletter_api_hides_unapproved_articles(self):
+        """Readers should receive only approved article IDs in newsletters."""
+        pending_article = Article.objects.create(
+            title="Pending API Article",
+            content=(
+                "This article must not appear in newsletter "
+                "API responses."
+            ),
+            author=self.journalist,
+            approved=False,
+        )
+        self.newsletter.articles.add(pending_article)
+
+        self.authenticate(self.reader)
+
+        response = self.client.get(
+            reverse("newsletter-list-create")
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        newsletter_data = next(
+            item
+            for item in response.data
+            if item["id"] == self.newsletter.pk
+        )
+
+        self.assertIn(self.article.pk, newsletter_data["articles"])
+        self.assertNotIn(
+            pending_article.pk,
+            newsletter_data["articles"],
+        )
+
     def test_reader_cannot_create_newsletter(self):
         """Verify readers cannot create newsletters."""
         self.authenticate(self.reader)
